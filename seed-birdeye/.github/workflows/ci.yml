@@ -1,0 +1,31 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+jobs:
+  secretos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python backend/scripts/check_secrets.py
+  backend:
+    needs: secretos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13" }
+      - run: pip install -r backend/requirements.txt
+      - working-directory: backend
+        env:
+          MASTER_KEY: "clave-solo-ci-no-usar-en-produccion-0123456789abcdef"
+        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=70
+  frontend:
+    needs: secretos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - working-directory: frontend
+        run: npm install && npm run build

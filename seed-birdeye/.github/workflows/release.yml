@@ -1,0 +1,42 @@
+name: Release
+on:
+  push: { tags: ["v*"] }
+jobs:
+  escaneo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python backend/scripts/check_secrets.py
+  imagen-docker:
+    needs: escaneo
+    runs-on: ubuntu-latest
+    permissions: { packages: write, contents: read }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: ${{ github.actor }}, password: ${{ secrets.GITHUB_TOKEN }} }
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/${{ github.repository }}:${{ github.ref_name }},ghcr.io/${{ github.repository }}:latest
+  escritorio:
+    needs: escaneo
+    strategy:
+      matrix:
+        include:
+          - { os: ubuntu-latest, args: "--linux" }
+          - { os: windows-latest, args: "--win" }
+          - { os: macos-latest, args: "--mac" }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - working-directory: desktop
+        run: npm ci && npx electron-builder ${{ matrix.args }} --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

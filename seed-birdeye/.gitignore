@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.env
+data/
+logs/
+node_modules/
+.next/
+out/
+.pytest_cache/
+.coverage
+release/
+ui/
+!backend/ui/.gitkeep
